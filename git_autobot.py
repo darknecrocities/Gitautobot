@@ -27,6 +27,14 @@ def get_original_content():
             return f.read()
     return ""
 
+def git_push():
+    """Tries to push to remote. If it fails, pulls with rebase and retries."""
+    if run_command("git push origin main") is None:
+        print("[!] Push rejected. Pulling latest changes from remote and rebasing...")
+        run_command("git pull --rebase origin main")
+        print("[!] Retrying push...")
+        run_command("git push origin main")
+
 def restore_original(content):
     """Restores the file to its original content and pushes."""
     print("\n[!] Interrupt caught. Restoring original state...")
@@ -35,13 +43,17 @@ def restore_original(content):
     
     run_command("git add .")
     run_command(f'git commit -m "{REVERT_MESSAGE}"')
-    run_command("git push origin main")
+    git_push()
     print("[+] Successfully reverted and pushed. Exiting.")
 
 def main():
     print("--- Git Auto-Commit Bot Started ---")
     print(f"Modifying: {FILE_TO_MODIFY}")
     print("Press Ctrl+C to stop and revert.")
+
+    # Pull latest changes from remote at startup to ensure clean state
+    print("[+] Syncing with remote repository...")
+    run_command("git pull --rebase origin main")
 
     original_content = get_original_content()
 
@@ -56,7 +68,7 @@ def main():
             print(f"[{count}] Adding, committing, and pushing...")
             run_command("git add .")
             run_command(f'git commit -m "{COMMIT_MESSAGE}"')
-            run_command("git push origin main")
+            git_push()
             
             count += 1
             time.sleep(DELAY)
